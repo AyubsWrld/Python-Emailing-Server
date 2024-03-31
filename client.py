@@ -5,6 +5,34 @@ def handle_choice(socket):
     socket.send(choice.encode('utf-8'))
     return choice
 
+def handleOne(socket):
+    response = socket.recv(1024).decode()
+    print(response, end = '')
+    clients = input()
+    socket.send(clients.encode('utf-8'))
+
+    response = socket.recv(1024).decode()
+    print(response, end = '')
+    title = input()
+    socket.send(title.encode('utf-8'))
+
+    response = socket.recv(1024).decode()
+    print(response, end = '')
+    loadContents = input()
+    socket.send(loadContents.encode('utf-8'))
+
+    response = socket.recv(1024).decode()
+    print(response, end = '')
+    filename = input()
+    socket.send(filename.encode('utf-8'))
+    print('The message is sent to the server \n')
+
+def handleThree(socket):
+    MESSAGE = socket.recv(1024).decode()
+    response = input(MESSAGE)
+
+    socket.send(response.encode('utf-8'))
+
 def validate(conn):
     message = conn.recv(1024).decode('utf-8') 
     x = input(message)
@@ -15,7 +43,6 @@ def validate(conn):
     message = conn.recv(1024).decode('utf-8') 
     x = input(message)
     conn.send(x.encode('utf-8'))
-
     ACK = conn.recv(1024).decode('utf-8')
     return ACK
 
@@ -31,12 +58,14 @@ def client():
     print(message)
     if validation_state == 'True' : 
         choice = handle_choice(client_socket)
-        print(type(choice))
-        while choice  != '4': 
+        while choice != '4': 
+            if choice == '1' : 
+                handleOne(client_socket)
+            elif choice == '3' : 
+                handleThree(client_socket)
             message = client_socket.recv(1024).decode('utf-8')
             print(message)
             choice = handle_choice(client_socket)
-            print(type(choice))
     client_socket.close()  # Close the connection
 
 if __name__ == '__main__':

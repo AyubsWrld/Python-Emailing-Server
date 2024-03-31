@@ -23,15 +23,12 @@ def validate(conn): #Also handles the menu msg?
     #Send Server IP
     conn.send(MESSAGES[0].encode('utf-8'))  # Send response to the client
     servername = conn.recv(1024).decode('utf-8') 
-
     #Send enter Username
     conn.send(MESSAGES[1].encode('utf-8'))  # Send response to the client
     username = conn.recv(1024).decode('utf-8') 
-
     #Send Enter Password
     conn.send(MESSAGES[2].encode('utf-8'))  # Send response to the client
-    password = conn.recv(1024).decode('utf-8') 
-    
+    password = conn.recv(1024).decode('utf-8')  
     #Store credentials in tuple 
     credentials = (servername, username, password)
     with open('user_pass.json' , 'r') as userDatabase : 
@@ -44,9 +41,9 @@ def validate(conn): #Also handles the menu msg?
                 user_exists  = True
                 break
     conn.send(str(user_exists).encode('utf-8'))
-    return user_exists
+    return user_exists , username
 
-#---------------------------------------------------- Messages index to retrieve the one you want --------------------------------------------------------
+#---------------------------------------------------- Messages index to retrieve the one you want ----------------------------------
 
 
 #---------------------------------------------------- Gets Choice from user --------------------------------------------------------
@@ -57,14 +54,45 @@ def getChoice(socket):
 
 #---------------------------------------------------- Gets Choice from user --------------------------------------------------------
 
-#---------------------------------------------------- Handles communication loop until 4 entered --------------------------------------------------------
+
+def handleOne(socket): 
+    PROMPTS = ['Enter destinations (seprated by ;) ',
+               'Enter title: ',
+               'Would you like to load contents from a file?(Y/N): ',
+               'Enter filename: ',
+               'The message is sent to the server']
+    socket.send(PROMPTS[0].encode('utf-8'))
+    response = socket.recv(1024).decode()
+    print(response)
+
+    socket.send(PROMPTS[1].encode('utf-8'))
+    response = socket.recv(1024).decode()
+    print(response)
+
+    socket.send(PROMPTS[2].encode('utf-8'))
+    response = socket.recv(1024).decode()
+    print(response)
+
+    socket.send(PROMPTS[3].encode('utf-8'))
+    response = socket.recv(1024).decode()
+    print(response)
+
+def handleThree(socket):
+    MESSAGE = "Enter the email index you wish to view: "
+    socket.send(MESSAGE.encode('utf-8'))
+
+    response = socket.recv(1024).decode()
+    print(response)
+
+
+#---------------------------------------------------- Handles communication loop until 4 entered -----------------------------------
 def handleComms(socket): 
     socket.send(MENUMSG.encode('utf-8'))
     choice = getChoice(socket)
     continue_connection = True
     while continue_connection : 
         if choice == '1':
-            print("Yes") 
+            handleOne(socket)
             socket.send(MENUMSG.encode('utf-8'))
             choice = getChoice(socket)
 
@@ -74,7 +102,7 @@ def handleComms(socket):
             choice = getChoice(socket)
 
         elif choice == '3' : 
-            print("No") 
+            handleThree(socket)
             socket.send(MENUMSG.encode('utf-8'))
             choice = getChoice(socket)
 
@@ -107,17 +135,21 @@ def start_server():
 
     while True:
         conn, address = server_socket.accept()  # Accept a new connection
-        print(f"Connection from {address} has been established.")
-        
-        user_exists = validate(conn) 
+        nTuple = validate(conn)  # Returns tuple with username and whether the user exists or not  (Boolean , Username)
+        user_exists = nTuple[0]
         if not user_exists : 
             ERRORMSG = "Invalid username or password\nConnection terminating"
+            print(f"The recieved information: {nTuple[1]} is invalid")
             conn.send(ERRORMSG.encode('utf-8'))
             conn.close()
         else:
+            print(f"Connection Accepted and Symmetric key generated for: {nTuple[1]}")
             handleComms(conn)
 
         conn.close()  # Close the connection
+        break
+
+#---------------------------------------------------- Overarching server prototype --------------------------------------------------------
 
 if __name__ == '__main__':
     start_server()
