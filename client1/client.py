@@ -10,7 +10,7 @@ import os
 
 sym_key = None
 client_private = None
-
+username = None
 # Get the server public key
 with open('server_public.pem', 'r') as ServerKey:
     SERVER_PUBLIC = RSA.import_key(ServerKey.read())
@@ -82,7 +82,7 @@ def decrypt_data_with_privatekey(data):
 
 # Validate the client
 def validate(conn):
-    global sym_key
+    global sym_key, username
     # Send username and password
     message = conn.recv(1024).decode('utf-8') 
     username = input(message)
@@ -107,7 +107,21 @@ def validate(conn):
 
 # Sending email subprotocol
 def sending_email_subprotocol(conn):
-    pass
+    # Decrypt send email message
+    send_email_msg = decrypt_data_with_sym(conn.recv(1024))
+    if send_email_msg == "Send the email":
+        destination_clients = input("Enter destinations (separated by ;): ").split(';')
+        email_title = input("Enter title: ")
+        load_content = input("Would you like to load contents from a file?(Y/N) ")
+        message_content = input("Enter message contents: ")
+        if load_content.upper() == "Y":
+            with open(load_content, 'r') as file:
+                message_content = file.read()
+        email = f"From: {username}\nTo: {destination_clients}\nTitle: {email_title}\nContent Length: {len(message_content)}\nContent: {message_content}"
+        conn.send(encrypt_data_with_sym(email))
+        print("The message is sent to the server.")
+
+
 
 # Viewing inbox subprotocol
 def viewing_inbox_subprotocol(conn):

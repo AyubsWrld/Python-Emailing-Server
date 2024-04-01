@@ -117,8 +117,13 @@ def modify_email(email: str):
 
 # Sending email subprotocol
 def sending_email_subprotocol(conn):
-    pass
-
+    # Send email message, encrypted with sym_key
+    conn.send(encrypt_data_with_sym("Send the email"))
+    email = decrypt_data_with_sym(conn.recv(1024))
+    from_email = email
+    to_email = email
+    content_length = email
+    
 # Viewing inbox subprotocol
 def viewing_inbox_subprotocol(conn):
     pass
