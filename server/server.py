@@ -100,12 +100,6 @@ def validate(conn):
         conn.send(invalid_message)
         print(f"The received client information: {username} is invalid (ConnectionTerminated).")
     return False
-
-def save_email(email: str, recipient_users, title):
-    for user in recipient_users:
-        file_name = f"./{user}/{user}_{title}.txt"
-        with open(file_name, "w") as f:
-            f.write(email)
         
 # Add time and date to the email information
 def modify_email(email: str):
@@ -120,24 +114,67 @@ def sending_email_subprotocol(conn):
     # Send email message, encrypted with sym_key
     conn.send(encrypt_data_with_sym("Send the email"))
     email = decrypt_data_with_sym(conn.recv(1024))
-    print(email)
     from_sender = email[email.find("From: ") + 6: email.find("To: ") - 1]
-    to_dest = json.loads(email[email.find("To: ") + 4: email.find("Title: ") - 1])
+    to_dest = email[email.find("To: ") + 4: email.find("Title: ") - 1].split(";")
     title = email[email.find("Title: ") + 7: email.find("Content Length: ") - 1]
     content_length = int(email[email.find("Content Length: ") + 16: email.find("Content: ") - 1])
     content = email[email.find("Content: ") + 9:]
-    print(f"|{from_sender}|")
-    print(f"|{to_dest}|")
-    print(f"|{title}|")
-    print(f"|{content_length}|")
-    print(f"|{content}|")
+    to_dest[-1] = to_dest[-1][:-1] if to_dest[-1][:-1] == ";" else to_dest[-1]
+    recipients = ";".join(to_dest)
+    print(f"An email from {from_sender} is sent to [{recipients}] has a content length of {content_length}")
+    email = modify_email(email)
+    for recipient in to_dest:
+        title = title.replace(" ", "")
+        file = f"./{recipient}/{from_sender}_{title}.txt"
+        with open(file, 'w') as e:
+            e.write(email)
+
+# Extracts the datetime elemtn in the list, and converts it
+def extract_datetime(email_lst):
+    return datetime.strptime(email_lst[1], '%Y-%m-%d %H:%M:%S.%f')
+
+# Gets and sorts the clients emails based on date and time
+def get_sorted_emails():
+    folder = f"./{username}"
+    files = [file for file in os.listdir(folder) if os.path.isfile(os.path.join(folder, file))]
+    emails = []
+    sorted_emails = []
+    for file in files:
+        file = f"./{username}/{file}"
+        with open(file, 'r') as f:
+            email = f.read()
+        from_sender = email[email.find("From: ") + 6: email.find("To: ") - 1]
+        date_time = email[email.find("Time and Date: ") + 15: email.find("Title: ") - 1]
+        title = email[email.find("Title: ") + 7: email.find("Content Length: ") - 1]
+        e = [from_sender, date_time, title]
+        emails.append(e)
+    sorted_emails = sorted(emails, key=extract_datetime)
+    sorted_emails = sorted_emails[::-1]
+    for i in range(len(sorted_emails)):
+        sorted_emails[i].insert(0, str(i+1))
+    return sorted_emails
+
 # Viewing inbox subprotocol
 def viewing_inbox_subprotocol(conn):
-    pass
+    message = "Index    From           DateTime                          Title\n"
+    sorted_emails = get_sorted_emails()
+    for email in sorted_emails:
+        message += "        ".join(email) + "\n"
+    conn.send(encrypt_data_with_sym(message))
+    ack = decrypt_data_with_sym(conn.recv(1024))
+    if not (ack == "OK"):
+        print("ACK not recieved!")
 
 # Viewing email subprotocol
 def viewing_email_subprotocl(conn):
-    pass
+    conn.send(encrypt_data_with_sym("the server request email index"))
+    index = decrypt_data_with_sym(conn.recv(1024))
+    emails = get_sorted_emails()
+    email = emails[int(index) - 1]
+    file = f"./{username}/{username}_{email[3]}.txt"
+    with open(file, 'r') as f:
+        email = f.read()
+    conn.send(encrypt_data_with_sym(email))
 
 # Main server function
 def start_server():
@@ -161,7 +198,6 @@ def start_server():
                     conn.send(encrypt_data_with_sym(MENUMSG))
                     response = conn.recv(1024)
                     response = decrypt_data_with_sym(response)
-                    print(f"|{response}|")
                     if response == '1':
                         sending_email_subprotocol(conn)
                     elif response == '2':

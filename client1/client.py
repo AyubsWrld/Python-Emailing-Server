@@ -110,7 +110,7 @@ def sending_email_subprotocol(conn):
     # Decrypt send email message
     send_email_msg = decrypt_data_with_sym(conn.recv(1024))
     if send_email_msg == "Send the email":
-        destination_clients = input("Enter destinations (separated by ;): ").split(';')
+        destination_clients = input("Enter destinations (separated by ;): ")
         email_title = input("Enter title: ")
         load_content = input("Would you like to load contents from a file?(Y/N) ")
         if load_content.upper() == "Y":
@@ -123,16 +123,21 @@ def sending_email_subprotocol(conn):
         conn.send(encrypt_data_with_sym(email))
         print("The message is sent to the server.")
 
-
-
 # Viewing inbox subprotocol
 def viewing_inbox_subprotocol(conn):
-    pass
+    inbox = decrypt_data_with_sym(conn.recv(1024))
+    print(inbox)
+    conn.send(encrypt_data_with_sym("OK"))
 
 # Viewing email subprotocol
 def viewing_email_subprotocl(conn):
-    pass
-
+    message = decrypt_data_with_sym(conn.recv(1024))
+    if message == "the server request email index":
+        index = input("Enter the email index you wish to view: ")
+        conn.send(encrypt_data_with_sym(index))
+        email = decrypt_data_with_sym(conn.recv(1024))
+        print(email)
+        
 # Main client function
 def client():
     host = '127.0.0.1' # Server's IP address
