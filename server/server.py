@@ -120,10 +120,17 @@ def sending_email_subprotocol(conn):
     # Send email message, encrypted with sym_key
     conn.send(encrypt_data_with_sym("Send the email"))
     email = decrypt_data_with_sym(conn.recv(1024))
-    from_email = email
-    to_email = email
-    content_length = email
-    
+    print(email)
+    from_sender = email[email.find("From: ") + 6: email.find("To: ") - 1]
+    to_dest = json.loads(email[email.find("To: ") + 4: email.find("Title: ") - 1])
+    title = email[email.find("Title: ") + 7: email.find("Content Length: ") - 1]
+    content_length = int(email[email.find("Content Length: ") + 16: email.find("Content: ") - 1])
+    content = email[email.find("Content: ") + 9:]
+    print(f"|{from_sender}|")
+    print(f"|{to_dest}|")
+    print(f"|{title}|")
+    print(f"|{content_length}|")
+    print(f"|{content}|")
 # Viewing inbox subprotocol
 def viewing_inbox_subprotocol(conn):
     pass
@@ -152,7 +159,9 @@ def start_server():
             if ack == "OK":
                 while True:
                     conn.send(encrypt_data_with_sym(MENUMSG))
-                    response = decrypt_data_with_sym(conn.recv(1024))
+                    response = conn.recv(1024)
+                    response = decrypt_data_with_sym(response)
+                    print(f"|{response}|")
                     if response == '1':
                         sending_email_subprotocol(conn)
                     elif response == '2':

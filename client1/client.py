@@ -113,10 +113,12 @@ def sending_email_subprotocol(conn):
         destination_clients = input("Enter destinations (separated by ;): ").split(';')
         email_title = input("Enter title: ")
         load_content = input("Would you like to load contents from a file?(Y/N) ")
-        message_content = input("Enter message contents: ")
         if load_content.upper() == "Y":
-            with open(load_content, 'r') as file:
+            message_content = input("Enter filename: ")
+            with open(message_content, 'r') as file:
                 message_content = file.read()
+        else:
+            message_content = input("Enter message contents: ")
         email = f"From: {username}\nTo: {destination_clients}\nTitle: {email_title}\nContent Length: {len(message_content)}\nContent: {message_content}"
         conn.send(encrypt_data_with_sym(email))
         print("The message is sent to the server.")
@@ -145,6 +147,7 @@ def client():
             menu = decrypt_data_with_sym(client_socket.recv(1024))
             print(menu)
             choice = input("Choice: ")
+            client_socket.send(encrypt_data_with_sym(choice))
             if choice == '1':
                 sending_email_subprotocol(client_socket)
             elif choice == '2':
