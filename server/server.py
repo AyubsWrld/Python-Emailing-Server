@@ -230,7 +230,7 @@ def viewing_email_subprotocl(conn):
     email = emails[int(index) - 1]
     title = email[3]
     title = title.replace(" ", "")
-    file = f"./{username}/{username}_{title}.txt"
+    file = f"./{username}/{email[1]}_{title}.txt"
     with open(file, 'r') as f:
         email = f.read()
     
@@ -241,8 +241,9 @@ def viewing_email_subprotocl(conn):
 def start_server():
     # Initialize Socket
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # Create socket
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # Reuse socket address
     server_socket.bind((HOST, PORT))  # Bind to the port
-    server_socket.listen(1)  # Listen for incoming connections
+    server_socket.listen(5)  # Listen for incoming connections with a larger queue
     print("Server started. Listening on port 13000.")
 
     while True:
@@ -250,39 +251,55 @@ def start_server():
         conn, address = server_socket.accept()
         print(f"Connection from {address} has been established.")
 
-        # Validate client
-        user_exists = validate(conn)
-        if not user_exists :
-            # Close connection is invalid client
+        # Fork a new process to handle the client
+        pid = os.fork()
+        # Child process
+        if pid == 0:
+            # Close the server socket in the child process
+            server_socket.close()
+            handle_client(conn)
+            # Close the client connection
             conn.close()
+            # Exit the child process
+            os._exit(0)
+        # Parent process
         else:
-            # Recieve and decrypt ack
-            ack = conn.recv(1024)
-            ack = decrypt_data_with_sym(ack)
-            if ack == "OK":
-                while True:
-                    # Send menu message
-                    conn.send(encrypt_data_with_sym(MENUMSG))
+            # Close the client connection in the parent process 
+            conn.close()
 
-                    # Recieve anbd decrpyt response
-                    response = conn.recv(1024)
-                    response = decrypt_data_with_sym(response)
-                    if response == '1':
-                        # Call Sending Email Subprotocol if choice is 1
-                        sending_email_subprotocol(conn)
-                    elif response == '2':
-                        # Call Viewing Inbox Subprotocol if choice is 2
-                        viewing_inbox_subprotocol(conn)
-                    elif response == '3':
-                        # Call Viewing Email Subprotocol if choice is 3
-                        viewing_email_subprotocl(conn)
-                    elif response == '4':
-                        # Perform Connection Terminal Subprotocol if choice is 4
-                        print(f"Terminating connection with {username}.")
-                        break
-                    
-        # Close the connection
-        conn.close() 
+# Function to handle client
+def handle_client(conn):
+    # Validate client
+    user_exists = validate(conn)
+    if not user_exists:
+        # Close connection if invalid client
+        conn.close()
+        return
+
+    # Receive and decrypt ack
+    ack = conn.recv(1024)
+    ack = decrypt_data_with_sym(ack)
+    if ack == "OK":
+        while True:
+            # Send menu message
+            conn.send(encrypt_data_with_sym(MENUMSG))
+
+            # Receive and decrypt response
+            response = conn.recv(1024)
+            response = decrypt_data_with_sym(response)
+            if response == '1':
+                # Call Sending Email Subprotocol if choice is 1
+                sending_email_subprotocol(conn)
+            elif response == '2':
+                # Call Viewing Inbox Subprotocol if choice is 2
+                viewing_inbox_subprotocol(conn)
+            elif response == '3':
+                # Call Viewing Email Subprotocol if choice is 3
+                viewing_email_subprotocl(conn)
+            elif response == '4':
+                # Perform Connection Termination Subprotocol if choice is 4
+                print(f"Terminating connection with {username}.")
+                break
 
 if __name__ == '__main__':
     start_server()

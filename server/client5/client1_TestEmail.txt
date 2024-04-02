@@ -1,0 +1,6 @@
+From: client1
+To: client1;client2;client3;client4;client5
+Time and Date Received: 2024-04-01 20:46:49.349939
+Title: Test Email
+Content Length: 21
+Content: This is a test Email!
